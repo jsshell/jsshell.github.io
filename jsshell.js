@@ -1,6 +1,6 @@
 // Javascript Shell
 
-(function (global) { 
+(function (global) {
   "use strict";
   window.addEventListener("load", initialize, false);
   var O = Object;
@@ -23,14 +23,13 @@
   var Dtis = Date.prototype.toISOString;
   var Fts = Function.prototype.toString;
   var REe = RegExp.prototype.exec;
-  
+
   var lineLength = 80;
   var funcNameMatchRE = /^\s*function\s+([^\(\s]+)\s*\(/;
-  var funcSourceMatchRE = 
-      /^\s*function\s+[^\(\s]+\s*\([^)]*\)\s*\{([\x00-\uffff]*)\}\s*$/;
+  var funcSourceMatchRE = /\{([\x00-\uffff]*)\}\s*$/;
 
-  function IsObject(v) { 
-    return (typeof v == "object") ? (v !== null) : (typeof v == "function"); 
+  function IsObject(v) {
+    return (typeof v == "object") ? (v !== null) : (typeof v == "function");
   }
   function IsFunction(v) { return Ots.call(v) == "[object Function]"; }
   function IsPlainObject(v) { return Ots.call(v) == "[object Object]"; }
@@ -65,45 +64,45 @@
     if (result == "string") return "string#" + v.length;
     if (result != "object") return result;
     if (!v) return "null";
-    result = className(v); 
+    result = className(v);
     if (result == "Object") {
       var own = true;
       var constructor = GetOwnValue(v, "constructor");
       if (typeof constructor != "function") {
-	own = false;
-	constructor = GetValue(v, "constructor");
+        own = false;
+        constructor = GetValue(v, "constructor");
       }
       if (typeof constructor == "function") {
 
-	var constructorName = functionName(constructor);
-	if (typeof constructorName == "string" && constructorName.length > 0) {
-	  result = constructorName;
-	  if (own) result += ".prototype";
-	}
+        var constructorName = functionName(constructor);
+        if (typeof constructorName == "string" && constructorName.length > 0) {
+          result = constructorName;
+          if (own) result += ".prototype";
+        }
       }
     } else {
       switch (result) {
       case "RegExp":
         result += " /" + v.source + "/";
-	if (v.global) result += "g";
-	if (v.ignoreCase) result += "i";
-	if (v.multiline) result += "m";
-	break;
+        if (v.global) result += "g";
+        if (v.ignoreCase) result += "i";
+        if (v.multiline) result += "m";
+        break;
       case "Array":
-	result += "#" + v.length;
-	break;
+        result += "#" + v.length;
+        break;
       case "Number":
-	result += "(" + Nvo.call(v) + ")";
-	break;
+        result += "(" + Nvo.call(v) + ")";
+        break;
       case "Boolean":
-	result += "(" + Bvo.call(v) + ")";
-	break;
+        result += "(" + Bvo.call(v) + ")";
+        break;
       case "String":
-	result += "(" + shortValueToString(Svo.call(v)) + ")";
-	break;
+        result += "(" + shortValueToString(Svo.call(v)) + ")";
+        break;
       case "Date":
-	result += "(" + Dtis.call(v) + ")";
-	break;
+        result += "(" + Dtis.call(v) + ")";
+        break;
       }
       result = "<" + result + ">";
     }
@@ -119,12 +118,12 @@
       var value = GetOwnValue(src, name);
       if (IsPlainObject(value)) {
         var prop = dst[name];
-	// Copy recursively.
-	assignAttributes(prop, value);
+        // Copy recursively.
+        assignAttributes(prop, value);
       } else if (typeof value == "function") {
-	dst.addEventListener(name, value, false);
+        dst.addEventListener(name, value, false);
       } else {
-	dst[name] = value;
+        dst[name] = value;
       }
     }
   }
@@ -133,7 +132,7 @@
     if (childSpec == null) return;
     if (IsArray(childSpec)) {
       for (var i = 0; i < childSpec.length; i++) {
-	addChild(element, childSpec[i]);
+        addChild(element, childSpec[i]);
       }
       return;
     }
@@ -152,7 +151,7 @@
   }
   // |tag| must be a string.
   // |attrs|, if present, must be a non-array, non-DOM object.
-  // |children| may be either a DOM Node, DocumentFragment, string or array 
+  // |children| may be either a DOM Node, DocumentFragment, string or array
   //    any of any of these.
   function DOM(tag, attrs, children /*...*/) {
     var element = document.createElement(tag);
@@ -171,26 +170,32 @@
 
   function initialize() {
     document.body.appendChild(DOM("h1", {className: "jsshell-headline"},
-				  "JSShell"));
+                                  "JSShell"));
     var inputArea = createInput();
     document.body.appendChild(inputArea);
     inputArea.getElementsByTagName("textarea")[0].focus();
   }
 
-  function executeInput(input) {
+  function executeInput(input, use_eval) {
     var text = St.call(input.value);
     if (text.length == 0) return;
     document.body.insertBefore(DOM("div", {className: "jsshell-inputlog"},
-				   text),
-			       document.body.lastChild);
-    evalblock: {
-      try {
-        var value = indirectEval(text);
-      } catch (exn) {
-        reportException(exn);
-	break evalblock;
+                                   text),
+                               document.body.lastChild);
+    if (use_eval) {
+      evalblock: {
+        try {
+          var value = indirectEval(text);
+        } catch (exn) {
+          reportException(exn);
+          break evalblock;
+        }
+        if (value !== void 0) reportValue(value);
       }
-      if (value !== void 0) reportValue(value); 
+    } else {
+      var script = DOM("script");
+      script.textContent = text;
+      document.body.insertBefore(script, document.body.lastChild);
     }
 
     input.style.width = null;
@@ -210,13 +215,13 @@
   }
 
   function insertIFrame(input) {
-    var frame = DOM("iframe", {src: 
+    var frame = DOM("iframe", {src:
         "javascript:top.document.getElementById('jsshell-input-id').value"});
     document.body.insertBefore(frame, document.body.lastChild);
     reportValue(frame);
   }
 
-  // Page visible shell-specific namespace exposing 
+  // Page visible shell-specific namespace exposing
   // the log function.
   global.shell = { log: reportValue };
 
@@ -225,30 +230,38 @@
 
   function createInput() {
     return DOM("div", {className: "jsshell" },
-	       DOM("textarea", 
-		   { className: "jsshell-input", 
-           	     id: "jsshell-input-id",
-		     rows: 1,
+               DOM("textarea",
+                   { className: "jsshell-input",
+                     id: "jsshell-input-id",
+                     rows: 1,
                      cols: lineLength,
                      wrap: "hard",
                      keypress: inputKeyPress, keyup: inputKeyUp }),
-	       DOM("br"),
-	       DOM("button", {className: "jsshell-button",
-		              type: "button",
-		              click: executeButtonClick}, "Execute"),
-	       DOM("button", {className: "jsshell-button",
-		              type: "button",
-		              click: insertHTMLButtonClick }, "Insert HTML"),
-	       DOM("button", {className: "jsshell-button",
-		              type:"button",
-		              click: insertIFrameButtonClick }, 
-    		              "Insert iframe"));
+               DOM("br"),
+               DOM("button", {className:
+                                  "jsshell-button jsshell-default-button",
+                              type: "button",
+                              title: "eval the input in the global scope",
+                              click: evalButtonClick}, "Evaluate"),
+               DOM("button", {className: "jsshell-button",
+                              type: "button",
+                              title: "Execute input as script",
+                              click: executeButtonClick}, "Execute"),
+               DOM("button", {className: "jsshell-button",
+                              type: "button",
+                              title: "Insert input as HTML in page",
+                              click: insertHTMLButtonClick }, "Insert HTML"),
+               DOM("button", {className: "jsshell-button",
+                              type:"button",
+                              title: "Insert input as content of a new iframe",
+                              click: insertIFrameButtonClick },
+                              "Insert iframe"));
   }
 
   function inputKeyPress(evt) {
     if (evt.keyCode == 10 || (evt.keyCode == 13 && evt.ctrlKey)) {
       // Ctrl+Ret
-      executeInput(this);
+      executeInput(this, true);
       evt.preventDefault();
       return;
     }
@@ -258,40 +271,44 @@
     // Plain return. Check for lines of input.
     var self = this;
     setTimeout(function(){
-		 var text = self.value;
-		 var lineCount = 0;
-		 var i = 0;
-		 var prev = 0;
-		 do {
-		   lineCount++;
-		   i = text.indexOf("\n", i) + 1;
-		   if (i > 0) {
-  		     if (i - prev > lineLength) {
-		       lineCount += ((i - prev) / lineLength) | 0;
-		     }
-		     prev = i;
-		   }
-		 } while (i > 0);
-		 if (text.length - prev > lineLength) {
-		   lineCount += ((text.length - prev) / lineLength) | 0;
-		 }
-		 if (self.rows != lineCount) self.rows = lineCount;
-	       }, 0);
+                 var text = self.value;
+                 var lineCount = 0;
+                 var i = 0;
+                 var prev = 0;
+                 do {
+                   lineCount++;
+                   i = text.indexOf("\n", i) + 1;
+                   if (i > 0) {
+                     if (i - prev > lineLength) {
+                       lineCount += ((i - prev) / lineLength) | 0;
+                     }
+                     prev = i;
+                   }
+                 } while (i > 0);
+                 if (text.length - prev > lineLength) {
+                   lineCount += ((text.length - prev) / lineLength) | 0;
+                 }
+                 if (self.rows != lineCount) self.rows = lineCount;
+               }, 0);
+  }
+
+  function evalButtonClick(evt) {
+    var input = this.parentNode.firstChild;
+    executeInput(input, true);
   }
 
   function executeButtonClick(evt) {
-    var input = this.previousSibling.previousSibling;
-    executeInput(input);
+    var input = this.parentNode.firstChild;
+    executeInput(input, false);
   }
 
   function insertHTMLButtonClick(evt) {
-    var input = this.previousSibling.previousSibling.previousSibling;
+    var input = this.parentNode.firstChild;
     insertHTML(input);
   }
 
   function insertIFrameButtonClick(evt) {
-    var input = 
-        this.previousSibling.previousSibling.previousSibling.previousSibling;
+    var input = this.parentNode.firstChild;
     insertIFrame(input);
   }
 
@@ -305,20 +322,20 @@
       delete global[key];
       this.parentNode.parentNode.removeChild(this.parentNode);
     }
-    document.body.insertBefore(DOM("div", {className:"jsshell-property"}, 
-				   DOM("span", { className: "jsshell-remove",
-    					         click: clean }, "[x]"),
-				   DOM("span", 
-				       {className: "jsshell-property-key"}, 
-				       key), " = ",
-				   displayValue(value)),
-			       document.body.lastChild);
+    document.body.insertBefore(DOM("div", {className:"jsshell-property"},
+                                   DOM("span", { className: "jsshell-remove",
+                                                 click: clean }, "[x]"),
+                                   DOM("span",
+                                       {className: "jsshell-property-key"},
+                                       key), " = ",
+                                   displayValue(value)),
+                               document.body.lastChild);
   }
 
   function reportException(value) {
-    document.body.insertBefore(DOM("div", "" + value, DOM("br"), 
-				   DOM("pre", value.stack)),
-			       document.body.lastChild);
+    document.body.insertBefore(DOM("div", "" + value, DOM("br"),
+                                   DOM("pre", value.stack)),
+                               document.body.lastChild);
   }
 
   function displayStringCollapsed(v) {
@@ -327,11 +344,11 @@
     function expandString(evt) {
       this.removeEventListener("click", expandString, false);
       this.parentNode.parentNode.replaceChild(displayStringExpanded(v),
-					      this.parentNode);
+                                              this.parentNode);
     }
-    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty), 
-	       DOM("span", {className:"jsshell-expand",
-		            click: expandString}, "..."));
+    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty),
+               DOM("span", {className:"jsshell-expand",
+                            click: expandString}, "..."));
   }
 
   function displayStringExpanded(v) {
@@ -339,20 +356,20 @@
     function collapseString(evt) {
       this.removeEventListener("click", collapseString, false);
       this.parentNode.parentNode.replaceChild(displayStringCollapsed(v),
-					      this.parentNode);
+                                              this.parentNode);
     }
-    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty), 
-	               " (", DOM("span", { className: "jsshell-collapse",
-				           click: collapseString },
-				 "collapse"), ")");
+    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty),
+                       " (", DOM("span", { className: "jsshell-collapse",
+                                           click: collapseString },
+                                 "collapse"), ")");
   }
 
   function prettyPrintPrimitive(v) {
     if (typeof v === "string") {
       if (v.length > 72) {
-	return displayStringCollapsed(v);
+        return displayStringCollapsed(v);
       }
-      return Js(v);
+      return DOM("span", {className: "jsshell-string"}, Js(v));
     } else {
       return "" + v;
     }
@@ -361,23 +378,23 @@
   function displayValue(value) {
     var res;
     if (!IsObject(value)) {
-      res = DOM("span", 
-		prettyPrintPrimitive(value));
+      res = DOM("span",
+                prettyPrintPrimitive(value));
     } else if (IsArray(value)) {
-      res = DOM("span", 
-		"[", displayObjectCollapsed(value), "]");
+      res = DOM("span",
+                "[", displayObjectCollapsed(value), "]");
     } else if (IsFunction(value)) {
       res = DOM("span",
-		"function ", functionName(value), "() {",
-		displayFunctionSourceCollapsed(value), "}",
-		displayObjectCollapsed(value));
+                "function ", functionName(value), "() {",
+                displayFunctionSourceCollapsed(value), "}",
+                displayObjectCollapsed(value));
       return res;
     } else {
-      res = DOM("span", 
-	        "{", displayObjectCollapsed(value), "}");
+      res = DOM("span",
+                "{", displayObjectCollapsed(value), "}");
     }
     res.appendChild(DOM("span", { className: "jsshell-typename" },
-			" : ", TypeName(value)));
+                        " : ", TypeName(value)));
     return res;
   }
 
@@ -385,12 +402,12 @@
     switch (typeof value) {
     case "string":
       if (value.length > 10) {
-	value = Sss.call(value, 0, 7) + "...";
+        value = Sss.call(value, 0, 7) + "...";
       }
       return Js(value);
-    case "object":    
+    case "object":
       if (value !== null) {
-	return "<" + typeName(value) + ">";
+        return "<" + typeName(value) + ">";
       }
       // Fallthrough on null.
     case "number":
@@ -424,11 +441,11 @@
     function collapse(evt) {
       this.removeEventListener(this, collapse, false);
       this.parentNode.parentNode.replaceChild(displayObjectCollapsed(object),
-					      this.parentNode);
+                                              this.parentNode);
     }
     var list = DOM("span", {className:"jsshell-value-list"},
-		   DOM("span", {className:"jsshell-collapse",
-			        click: collapse}, " (collapse) "));
+                   DOM("span", {className:"jsshell-collapse",
+                                click: collapse}, " (collapse) "));
     var proto = Ogpo(object);
     if (proto) {
       list.appendChild(displayPseudoProperty("[[Prototype]]", proto));
@@ -440,7 +457,7 @@
 
     var primitiveValue;
     switch (Ots.call(object)) {
-    case "[object String]": 
+    case "[object String]":
       primitiveValue = Svo.call(object);
       break;
     case "[object Number]":
@@ -454,8 +471,8 @@
       break;
     }
     if (primitiveValue !== void 0) {
-      list.appendChild(displayPseudoProperty("[[PrimitiveValue]]", 
-					     primitiveValue));
+      list.appendChild(displayPseudoProperty("[[PrimitiveValue]]",
+                                             primitiveValue));
     }
 
     var keys = Ogopn(object);
@@ -468,23 +485,23 @@
 
   function displayPseudoProperty(key, value) {
     return DOM("div", {className:"jsshell-property"},
-	       DOM("span", {className:"jsshell-property-key"}, key),
-	       " : ",
-	       displayValue(value));
+               DOM("span", {className:"jsshell-property-key"}, key),
+               " : ",
+               displayValue(value));
   }
 
   function displayProperty(object, key) {
     var line = DOM("div",{className: "jsshell-property"});
-    var keyText = DOM("span", 
-		      {className: "jsshell-property-key"}, 
-		      key);
+    var keyText = DOM("span",
+                      {className: "jsshell-property-key"},
+                      key);
     line.appendChild(keyText);
     var desc = Ogopd(object, key);
     var props = [];
     if (desc.enumerable) props.push("enumerable");
     if (desc.configurable) props.push("configurable");
-    
-    if ("value" in desc) { 
+
+    if ("value" in desc) {
       if (desc.writable) props.push("writable");
       line.appendChild(TXT(" : "));
       line.appendChild(displayValue(desc.value));
