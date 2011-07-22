@@ -21,10 +21,18 @@
   var Bvo = Boolean.prototype.valueOf;
   var Dvo = Date.prototype.valueOf;
   var Dtis = Date.prototype.toISOString;
-
+  var Fts = Function.prototype.toString;
+  var REe = RegExp.prototype.exec;
+  
   var lineLength = 80;
+  var funcNameMatchRE = /^\s*function\s+([^\(\s]+)\s*\(/;
+  var funcSourceMatchRE = 
+      /^\s*function\s+[^\(\s]+\s*\([^)]*\)\s*\{([\x00-\uffff]*)\}\s*$/;
 
-  function IsObject(v) { return (typeof v == "object") && v !== null; }
+  function IsObject(v) { 
+    return (typeof v == "object") ? (v !== null) : (typeof v == "function"); 
+  }
+  function IsFunction(v) { return Ots.call(v) == "[object Function]"; }
   function IsPlainObject(v) { return Ots.call(v) == "[object Object]"; }
   function IsArray(v) { return Ots.call(v) == "[object Array]"; }
   function IsArrayIndex(string) { return string === ("" + (string >> 0)); }
@@ -40,13 +48,24 @@
     }
   }
 
+  function className(object) {
+    var ots = Ots.call(object);
+    return Sss.call(ots, 8, ots.length - 1);
+  }
+
+  function functionName(func) {
+    var name = GetOwnValue(func, "name");
+    if (typeof name == "string" && name.length > 0) return name;
+    var match = REe.call(funcNameMatchRE, Fts.call(func));
+    if (match) return match[1];
+  }
+
   function TypeName(v) {
     var result = typeof(v);
     if (result == "string") return "string#" + v.length;
     if (result != "object") return result;
     if (!v) return "null";
-    var ots = Ots.call(v);
-    result = Sss.call(ots, 8, ots.length - 1);
+    result = className(v); 
     if (result == "Object") {
       var own = true;
       var constructor = GetOwnValue(v, "constructor");
@@ -55,9 +74,12 @@
 	constructor = GetValue(v, "constructor");
       }
       if (typeof constructor == "function") {
-	var constructorName = GetOwnValue(constructor, "name");
-	if (own) constructorName += ".prototype";
-	if (typeof constructorName == "string") result = constructorName;
+
+	var constructorName = functionName(constructor);
+	if (typeof constructorName == "string" && constructorName.length > 0) {
+	  result = constructorName;
+	  if (own) result += ".prototype";
+	}
       }
     } else {
       switch (result) {
@@ -94,8 +116,8 @@
     var names = Ogopn(src);
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var value = src[name];
-      if (IsObject(value)) {
+      var value = GetOwnValue(src, name);
+      if (IsPlainObject(value)) {
         var prop = dst[name];
 	// Copy recursively.
 	assignAttributes(prop, value);
@@ -344,6 +366,12 @@
     } else if (IsArray(value)) {
       res = DOM("span", 
 		"[", displayObjectCollapsed(value), "]");
+    } else if (IsFunction(value)) {
+      res = DOM("span",
+		"function ", functionName(value), "() {",
+		displayFunctionSourceCollapsed(value), "}",
+		displayObjectCollapsed(value));
+      return res;
     } else {
       res = DOM("span", 
 	        "{", displayObjectCollapsed(value), "}");
@@ -375,6 +403,11 @@
     default:
       return "<" + (typeof value) + ">";
     }
+  }
+
+  function displayFunctionSourceCollapsed(func) {
+    // TODO: Make it possible to expand source from function's toString.
+    return TXT("...");
   }
 
   function displayObjectCollapsed(object) {
@@ -459,7 +492,7 @@
       var getset = [];
       if (typeof desc.get == "function") { getset.push("get") };
       if (typeof desc.set == "function") { getset.push("set") };
-      // TODO
+      // TODO: Display getter and setter as functions.
       line.appendChild(TXT("<" + getset.join("/") + ">"));
     }
     keyText.title = props.join(", ");
