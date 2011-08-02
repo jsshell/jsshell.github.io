@@ -431,7 +431,7 @@
     // TODO: Show a (noninteractive) preview of the first few properties.
     function expand(evt) {
       this.removeEventListener("click", expand, false);
-      this.parentElement.replaceChild(displayObject(object), this);
+      this.parentNode.replaceChild(displayObject(object), this);
     }
     return DOM("span", {className:"jsshell-expand", click: expand }, "...");
   }
