@@ -4,6 +4,7 @@
   "use strict";
   window.addEventListener("load", initialize, false);
   var O = Object;
+  var Oc = Object.create;
   var Ogpo = Object.getPrototypeOf;
   var Oie = Object.isExtensible;
   var Op = Object.prototype;
@@ -149,6 +150,7 @@
   function TXT(string) {
     return document.createTextNode(string);
   }
+
   // |tag| must be a string.
   // |attrs|, if present, must be a non-array, non-DOM object.
   // |children| may be either a DOM Node, DocumentFragment, string or array
@@ -179,6 +181,7 @@
   function executeInput(input, use_eval) {
     var text = St.call(input.value);
     if (text.length == 0) return;
+    inputHistory.add(text);
     document.body.insertBefore(DOM("div", {className: "jsshell-inputlog"},
                                    text),
                                document.body.lastChild);
@@ -226,6 +229,36 @@
   global.shell = { log: reportValue };
 
   // -------------------------------------------------------------------
+  // HISTORY
+
+  var inputHistory = Oc.call(O, null);
+  inputHistory.length = 0;
+  inputHistory.position = 0;
+  inputHistory.add = function (value) {
+    if (this.length === 0 || this[this.length - 1] != value) {
+      this[this.length++] = value;
+    }
+    this.position = this.length;
+  };
+  inputHistory.go = function(input, direction) {
+    var newPosition = this.position + direction;
+    if (newPosition < 0 || newPosition > this.length) return;
+    if (this.position == this.length) {
+      this[this.length] = input.value;
+      if (this[newPosition] == input.value) {
+	newPosition -= 1;
+	if (newPosition < 0) return;
+      }
+    }
+    input.value = this[newPosition];
+    if (newPosition == this.length - 1 &&
+	this[newPosition] == this[this.length]) {
+      newPosition = this.length;
+    }
+    this.position = newPosition;
+  };
+
+  // -------------------------------------------------------------------
   // INPUT
 
   function createInput() {
@@ -236,39 +269,47 @@
                      rows: 1,
                      cols: lineLength,
                      wrap: "hard",
-                     keypress: inputKeyPress, keyup: inputKeyUp }),
+                     keyup: inputKeyUp }),
                DOM("br"),
-               DOM("button", {className:
-                                  "jsshell-button jsshell-default-button",
-                              type: "button",
-                              title: "eval the input in the global scope",
-                              click: evalButtonClick}, "Evaluate"),
-               DOM("button", {className: "jsshell-button",
-                              type: "button",
-                              title: "Execute input as script",
-                              click: executeButtonClick}, "Execute"),
-               DOM("button", {className: "jsshell-button",
-                              type: "button",
-                              title: "Insert input as HTML in page",
-                              click: insertHTMLButtonClick }, "Insert HTML"),
-               DOM("button", {className: "jsshell-button",
-                              type:"button",
-                              title: "Insert input as content of a new iframe",
-                              click: insertIFrameButtonClick },
-                              "Insert iframe"));
-  }
-
-  function inputKeyPress(evt) {
-    if (evt.keyCode == 10 || (evt.keyCode == 13 && evt.ctrlKey)) {
-      // Ctrl+Ret
-      executeInput(this, true);
-      evt.preventDefault();
-      return;
-    }
+               DOM("button", { className:
+                                   "jsshell-button jsshell-default-button",
+                               type: "button",
+                               title: "eval the input in the global scope" +
+                                      " (Ctrl-Return)",
+                               click: evalButtonClick },
+                             "Evaluate"),
+               DOM("button", { className: "jsshell-button",
+                               type: "button",
+                               title: "Execute input as script" +
+		                      " (Shift-Ctrl-Return)",
+                               click: executeButtonClick },
+		             "Execute"),
+               DOM("button", { className: "jsshell-button",
+                               type: "button",
+                               title: "Insert input as HTML in page",
+                               click: insertHTMLButtonClick },
+                             "Insert HTML"),
+               DOM("button", { className: "jsshell-button",
+                               type: "button",
+                               title:"Insert input as content of a new iframe",
+                               click: insertIFrameButtonClick },
+                             "Insert iframe"));
   }
 
   function inputKeyUp(evt) {
-    // Plain return. Check for lines of input.
+    if (evt.ctrlKey) {
+      if (evt.keyCode == 13) {
+	// C-Ret (eval) or S-C-Ret (execute).
+	executeInput(this, !evt.shiftKey);
+	return;
+      }
+      if (evt.keyCode == 38) {  // Cursor up.
+	inputHistory.go(this, -1);
+      } else if (evt.keyCode == 40) { // Cursor down.
+	inputHistory.go(this, 1);
+      }
+    }
+    // Check for lines of input.
     var self = this;
     setTimeout(function(){
                  var text = self.value;
