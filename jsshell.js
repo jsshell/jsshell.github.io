@@ -24,6 +24,7 @@
   var Dtis = Date.prototype.toISOString;
   var Fts = Function.prototype.toString;
   var REe = RegExp.prototype.exec;
+  var Call = Function.prototype.call.bind(Function.prototype.call);
 
   var lineLength = 80;
   var funcNameMatchRE = /^\s*function\s+([^\(\s]+)\s*\(/;
@@ -32,9 +33,9 @@
   function IsObject(v) {
     return (typeof v == "object") ? (v !== null) : (typeof v == "function");
   }
-  function IsFunction(v) { return Ots.call(v) == "[object Function]"; }
-  function IsPlainObject(v) { return Ots.call(v) == "[object Object]"; }
-  function IsArray(v) { return Ots.call(v) == "[object Array]"; }
+  function IsFunction(v) { return Call(Ots, v) == "[object Function]"; }
+  function IsPlainObject(v) { return Call(Ots, v) == "[object Object]"; }
+  function IsArray(v) { return Call(Ots, v) == "[object Array]"; }
   function IsArrayIndex(string) { return string === ("" + (string >> 0)); }
   function GetOwnValue(object, propertyName) {
     var desc = Ogopd(object, propertyName);
@@ -49,14 +50,14 @@
   }
 
   function className(object) {
-    var ots = Ots.call(object);
-    return Sss.call(ots, 8, ots.length - 1);
+    var ots = Call(Ots, object);
+    return Call(Sss, ots, 8, ots.length - 1);
   }
 
   function functionName(func) {
     var name = GetOwnValue(func, "name");
     if (typeof name == "string" && name.length > 0) return name;
-    var match = REe.call(funcNameMatchRE, Fts.call(func));
+    var match = Call(REe, funcNameMatchRE, Call(Fts, func));
     if (match) return match[1];
   }
 
@@ -93,16 +94,16 @@
         result += "#" + v.length;
         break;
       case "Number":
-        result += "(" + Nvo.call(v) + ")";
+        result += "(" + Call(Nvo, v) + ")";
         break;
       case "Boolean":
-        result += "(" + Bvo.call(v) + ")";
+        result += "(" + Call(Bvo, v) + ")";
         break;
       case "String":
-        result += "(" + shortValueToString(Svo.call(v)) + ")";
+        result += "(" + shortValueToString(Call(Svo, v)) + ")";
         break;
       case "Date":
-        result += "(" + Dtis.call(v) + ")";
+        result += "(" + Call(Dtis, v) + ")";
         break;
       }
       result = "<" + result + ">";
@@ -179,7 +180,7 @@
   }
 
   function executeInput(input, use_eval) {
-    var text = St.call(input.value);
+    var text = Call(St, input.value);
     if (text.length == 0) return;
     inputHistory.add(text);
     document.body.insertBefore(DOM("div", {className: "jsshell-inputlog"},
@@ -193,7 +194,7 @@
           reportException(exn);
           break evalblock;
         }
-        if (value !== void 0) reportValue(value);
+        if (Call(Ots, value) !== "[object Undefined]") reportValue(value);
       }
     } else {
       var script = DOM("script");
@@ -231,7 +232,7 @@
   // -------------------------------------------------------------------
   // HISTORY
 
-  var inputHistory = Oc.call(O, null);
+  var inputHistory = Call(Oc, O, null);
   inputHistory.length = 0;
   inputHistory.position = 0;
   inputHistory.add = function (value) {
@@ -380,7 +381,7 @@
   }
 
   function displayStringCollapsed(v) {
-    var slice = Sss.call(v, 0, 72);
+    var slice = Call(Sss, v, 0, 72);
     var pretty = Js(slice);
     function expandString(evt) {
       this.removeEventListener("click", expandString, false);
@@ -443,7 +444,7 @@
     switch (typeof value) {
     case "string":
       if (value.length > 10) {
-        value = Sss.call(value, 0, 7) + "...";
+        value = Call(Sss, value, 0, 7) + "...";
       }
       return Js(value);
     case "object":
@@ -497,18 +498,18 @@
     }
 
     var primitiveValue;
-    switch (Ots.call(object)) {
+    switch (Call(Ots, object)) {
     case "[object String]":
-      primitiveValue = Svo.call(object);
+      primitiveValue = Call(Svo, object);
       break;
     case "[object Number]":
-      primitiveValue = Nvo.call(object);
+      primitiveValue = Call(Nvo, object);
       break;
     case "[object Boolean]":
-      primitiveValue = Bvo.call(object);
+      primitiveValue = Call(Bvo, object);
       break;
     case "[object Date]":
-      primitiveValue = Dvo.call(object);
+      primitiveValue = Call(Dvo, object);
       break;
     }
     if (primitiveValue !== void 0) {
