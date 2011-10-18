@@ -176,7 +176,11 @@
                                   "JSShell"));
     var inputArea = createInput();
     document.body.appendChild(inputArea);
-    inputArea.getElementsByTagName("textarea")[0].focus();
+    var inputField = inputArea.getElementsByTagName("textarea")[0];
+    var cmdline = decodeURIComponent(location.search.substring(1));
+    inputField.value = cmdline;
+    inputField.focus();
+    inputField.select();
   }
 
   function executeInput(input, use_eval) {
