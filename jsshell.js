@@ -3,39 +3,60 @@
 (function (global) {
   "use strict";
   window.addEventListener("load", initialize, false);
+  // Capture constructors.
   var O = Object;
-  var Oc = Object.create;
-  var Ogpo = Object.getPrototypeOf;
-  var Oie = Object.isExtensible;
-  var Op = Object.prototype;
-  var Ogopn = Object.getOwnPropertyNames;
-  var Ogopd = Object.getOwnPropertyDescriptor;
-  var Ohop = Object.prototype.hasOwnProperty;
-  var Ots = Object.prototype.toString;
   var N = Node;
+  var AB = (typeof ArrayBuffer == "function") ? ArrayBuffer : null;
+  var F64A = (typeof Float64Array == "function") ? Float64Array : (AB = null);
+  var I32A = (typeof Int32Array == "function") ? Int32Array : (AB = null);
+  // Capture needed functions.
+  var isN = isNaN;
+  var isF = isFinite;
+  var Oc = O.create;
+  var Ogpo = O.getPrototypeOf;
+  var Oie = O.isExtensible;
+  var Op = O.prototype;
+  var Ogopn = O.getOwnPropertyNames;
+  var Ogopd = O.getOwnPropertyDescriptor;
   var indirectEval = eval;
   var Js = JSON.stringify;
-  var Sss = String.prototype.substring;
-  var St = String.prototype.trim;
-  var Svo = String.prototype.valueOf;
-  var Nvo = Number.prototype.valueOf;
-  var Bvo = Boolean.prototype.valueOf;
-  var Dvo = Date.prototype.valueOf;
-  var Dtis = Date.prototype.toISOString;
-  var Fts = Function.prototype.toString;
-  var REe = RegExp.prototype.exec;
-  var Call = Function.prototype.call.bind(Function.prototype.call);
+  var Mp = Math.pow;
+  var Mf = Math.floor;
+  var Mc = Math.ceil;
+  // Convert instance methods to functions expecting 'this' as first arg.
+  var call = Function.prototype.call;
+  var Ohop = call.bind(O.prototype.hasOwnProperty);
+  var Ots = call.bind(O.prototype.toString);
+  var Sss = call.bind(String.prototype.substring);
+  var St = call.bind(String.prototype.trim);
+  var Svo = call.bind(String.prototype.valueOf);
+  var Scca = call.bind(String.prototype.charCodeAt);
+  var Stuc = call.bind(String.prototype.toUpperCase);
+  var Nvo = call.bind(Number.prototype.valueOf);
+  var Nts = call.bind(Number.prototype.toString);
+  var Bvo = call.bind(Boolean.prototype.valueOf);
+  var Aj = call.bind(Array.prototype.join);
+  var Ar = call.bind(Array.prototype.reverse);
+  var Dvo = call.bind(Date.prototype.valueOf);
+  var Dtis = call.bind(Date.prototype.toISOString);
+  var Fts = call.bind(Function.prototype.toString);
+  var REe = call.bind(RegExp.prototype.exec);
+  var Call = call.bind(Function.prototype.call);
+  var Apply = call.bind(Function.prototype.apply);
 
   var lineLength = 80;
   var funcNameMatchRE = /^\s*function\s+([^\(\s]+)\s*\(/;
   var funcSourceMatchRE = /\{([\x00-\uffff]*)\}\s*$/;
 
+  // Whether to expand values by default.
+  var expand = false;
+
   function IsObject(v) {
     return (typeof v == "object") ? (v !== null) : (typeof v == "function");
   }
-  function IsFunction(v) { return Call(Ots, v) == "[object Function]"; }
-  function IsPlainObject(v) { return Call(Ots, v) == "[object Object]"; }
-  function IsArray(v) { return Call(Ots, v) == "[object Array]"; }
+  function IsFunction(v) { return Ots(v) == "[object Function]"; }
+  function IsPlainObject(v) { return Ots(v) == "[object Object]"; }
+  function IsArray(v) { return Ots(v) == "[object Array]"; }
   function IsArrayIndex(string) { return string === ("" + (string >> 0)); }
   function GetOwnValue(object, propertyName) {
     var desc = Ogopd(object, propertyName);
@@ -48,16 +69,30 @@
       object = Ogpo(object);
     }
   }
+  function arrayLike() {
+    // Creates an object that looks like an array (numbered
+    // elements and a length property). The object has no
+    // prototype, so it's safe to read and write elements.
+    // Copies any arguments into the object and sets the length.
+    var ll = Oc(null);
+    ll.length = 0;
+    var n = arguments.length;
+    for (var i = 0; i < n; i++) {
+      ll[i] = arguments[i]
+    }
+    ll.length = n;
+    return ll;
+  }
 
   function className(object) {
-    var ots = Call(Ots, object);
-    return Call(Sss, ots, 8, ots.length - 1);
+    var ots = Ots(object);
+    return Sss(ots, 8, ots.length - 1);
   }
 
   function functionName(func) {
     var name = GetOwnValue(func, "name");
     if (typeof name == "string" && name.length > 0) return name;
-    var match = Call(REe, funcNameMatchRE, Call(Fts, func));
+    var match = REe(funcNameMatchRE, Fts(func));
     if (match) return match[1];
   }
 
@@ -75,7 +110,6 @@
         constructor = GetValue(v, "constructor");
       }
       if (typeof constructor == "function") {
-
         var constructorName = functionName(constructor);
         if (typeof constructorName == "string" && constructorName.length > 0) {
           result = constructorName;
@@ -94,16 +128,16 @@
         result += "#" + v.length;
         break;
       case "Number":
-        result += "(" + Call(Nvo, v) + ")";
+        result += "(" + Nvo(v) + ")";
         break;
       case "Boolean":
-        result += "(" + Call(Bvo, v) + ")";
+        result += "(" + Bvo(v) + ")";
         break;
       case "String":
-        result += "(" + shortValueToString(Call(Svo, v)) + ")";
+        result += "(" + shortValueToString(Svo(v)) + ")";
         break;
       case "Date":
-        result += "(" + Call(Dtis, v) + ")";
+        result += "(" + Dtis(v) + ")";
         break;
       }
       result = "<" + result + ">";
@@ -133,10 +167,7 @@
   function addChild(element, childSpec) {
     if (childSpec == null) return;
     if (IsArray(childSpec)) {
-      for (var i = 0; i < childSpec.length; i++) {
-        addChild(element, childSpec[i]);
-      }
-      return;
+      childSpec = Apply(DOM, null, childSpec);
     }
     if (childSpec instanceof N) {
       element.appendChild(childSpec);
@@ -157,12 +188,24 @@
   // |children| may be either a DOM Node, DocumentFragment, string or array
   //    any of any of these.
   function DOM(tag, attrs, children /*...*/) {
+    var parts = tag.split(/([#.])/g);
+    tag = parts[0];
     var element = document.createElement(tag);
+    var classNames = arrayLike();
+    for (var i = 1; i < parts.length; i += 2) {
+      if (parts[i] == '.') {
+        classNames[classNames.length++] = parts[i + 1];
+      } else {
+        element.id = parts[i + 1];
+      }
+    }
+    element.className = Aj(classNames, " ");
     var childIndex = 1;
     if (IsPlainObject(attrs)) {
       assignAttributes(element, attrs);
       childIndex++;
     }
+
     while (childIndex < arguments.length) {
       var child = arguments[childIndex];
       addChild(element, child);
@@ -171,9 +214,18 @@
     return element;
   }
 
+  function areaWrap(string) {
+    if (string.length < 80) return string;
+    var lines = Mc(string.length / 80);
+    return DOM("textarea.jsshell-inlineText",
+                { cols : 80,
+                  rows : lines,
+                  value : string,
+                  readOnly : true });
+  }
+
   function initialize() {
-    document.body.appendChild(DOM("h1", {className: "jsshell-headline"},
-                                  "JSShell"));
+    document.body.appendChild(DOM("h1.jsshell-headline", "JSShell"));
     var inputArea = createInput();
     document.body.appendChild(inputArea);
     var inputField = inputArea.getElementsByTagName("textarea")[0];
@@ -184,10 +236,10 @@
   }
 
   function executeInput(input, use_eval) {
-    var text = Call(St, input.value);
+    var text = St(input.value);
     if (text.length == 0) return;
     inputHistory.add(text);
-    document.body.insertBefore(DOM("div", {className: "jsshell-inputlog"},
+    document.body.insertBefore(DOM("div.jsshell-inputlog",
                                    text),
                                document.body.lastChild);
     if (use_eval) {
@@ -198,7 +250,7 @@
           reportException(exn);
           break evalblock;
         }
-        if (Call(Ots, value) !== "[object Undefined]") reportValue(value);
+        if (Ots(value) !== "[object Undefined]") reportValue(value);
       }
     } else {
       var script = DOM("script");
@@ -220,6 +272,7 @@
     while (div.firstChild) {
       document.body.insertBefore(div.firstChild, document.body.lastChild);
     }
+    reportValue(div);
   }
 
   function insertIFrame(input) {
@@ -236,8 +289,7 @@
   // -------------------------------------------------------------------
   // HISTORY
 
-  var inputHistory = Call(Oc, O, null);
-  inputHistory.length = 0;
+  var inputHistory = arrayLike();
   inputHistory.position = 0;
   inputHistory.add = function (value) {
     if (this.length === 0 || this[this.length - 1] != value) {
@@ -251,13 +303,13 @@
     if (this.position == this.length) {
       this[this.length] = input.value;
       if (this[newPosition] == input.value) {
-	newPosition -= 1;
-	if (newPosition < 0) return;
+        newPosition -= 1;
+        if (newPosition < 0) return;
       }
     }
     input.value = this[newPosition];
     if (newPosition == this.length - 1 &&
-	this[newPosition] == this[this.length]) {
+      this[newPosition] == this[this.length]) {
       newPosition = this.length;
     }
     this.position = newPosition;
@@ -268,50 +320,58 @@
 
   function createInput() {
     return DOM("div", {className: "jsshell" },
-               DOM("textarea",
-                   { className: "jsshell-input",
-                     id: "jsshell-input-id",
-                     rows: 1,
-                     cols: lineLength,
-                     wrap: "hard",
-                     keyup: inputKeyUp }),
-               DOM("br"),
-               DOM("button", { className:
-                                   "jsshell-button jsshell-default-button",
-                               type: "button",
-                               title: "eval the input in the global scope" +
-                                      " (Ctrl-Return)",
-                               click: evalButtonClick },
-                             "Evaluate"),
-               DOM("button", { className: "jsshell-button",
-                               type: "button",
-                               title: "Execute input as script" +
-		                      " (Shift-Ctrl-Return)",
-                               click: executeButtonClick },
-		             "Execute"),
-               DOM("button", { className: "jsshell-button",
-                               type: "button",
-                               title: "Insert input as HTML in page",
-                               click: insertHTMLButtonClick },
-                             "Insert HTML"),
-               DOM("button", { className: "jsshell-button",
-                               type: "button",
-                               title:"Insert input as content of a new iframe",
-                               click: insertIFrameButtonClick },
-                             "Insert iframe"));
+               ["textarea", { className: "jsshell-input",
+                              id: "jsshell-input-id",
+                              rows: 1,
+                              cols: lineLength,
+                              wrap: "hard",
+                              keyup: inputKeyUp }],
+               ["br"],
+               ["button", { className:
+                                "jsshell-button jsshell-default-button",
+                            type: "button",
+                            title: "eval the input in the global scope" +
+                                   " (Ctrl-Return)",
+                            click: evalButtonClick },
+                          "Evaluate"],
+               ["button", { className: "jsshell-button",
+                            type: "button",
+                            title: "Execute input as script" +
+                                   " (Shift-Ctrl-Return)",
+                            click: executeButtonClick },
+                          "Execute"],
+               ["button", { className: "jsshell-button",
+                            type: "button",
+                            title: "Insert input as HTML in page",
+                            click: insertHTMLButtonClick },
+                          "Insert HTML"],
+               ["button.jsshell-button", {
+                          type: "button",
+                          title:"Insert input as content of a new iframe",
+                          click: insertIFrameButtonClick },
+                        "Insert iframe"],
+               ["label", {htmlFor: "jsshell-expand",
+                          title: "Expand some values as default"},
+                         ["button.jsshell-button#jsshell-expand", {
+                             type: "button",
+                             click: function () {
+                               expand = !expand;
+                               this.innerHTML = expand ? "&check;" : "&nbsp";
+                             }}, "\xA0"],
+                         "Expand"]);
   }
 
   function inputKeyUp(evt) {
     if (evt.ctrlKey) {
       if (evt.keyCode == 13) {
-	// C-Ret (eval) or S-C-Ret (execute).
-	executeInput(this, !evt.shiftKey);
-	return;
+        // C-Ret (eval) or S-C-Ret (execute).
+        executeInput(this, !evt.shiftKey);
+        return;
       }
       if (evt.keyCode == 38) {  // Cursor up.
-	inputHistory.go(this, -1);
+        inputHistory.go(this, -1);
       } else if (evt.keyCode == 40) { // Cursor down.
-	inputHistory.go(this, 1);
+        inputHistory.go(this, 1);
       }
     }
     // Check for lines of input.
@@ -368,33 +428,32 @@
       delete global[key];
       this.parentNode.parentNode.removeChild(this.parentNode);
     }
-    document.body.insertBefore(DOM("div", {className:"jsshell-property"},
-                                   DOM("span", { className: "jsshell-remove",
-                                                 click: clean }, "[x]"),
-                                   DOM("span",
-                                       {className: "jsshell-property-key"},
-                                       key), " = ",
+    document.body.insertBefore(DOM("div.jsshell-property",
+                                   ["span.jsshell-remove",
+                                        { click: clean }, "[x]"],
+                                   ["span.jsshell-property-key",
+                                       key],
+                                   ["span.jsshell-property-eq", " = "],
                                    displayValue(value)),
                                document.body.lastChild);
   }
 
   function reportException(value) {
-    document.body.insertBefore(DOM("div", "" + value, DOM("br"),
-                                   DOM("pre", value.stack)),
+    document.body.insertBefore(DOM("div", "" + value, ["br"],
+                                   ["pre", value.stack]),
                                document.body.lastChild);
   }
 
   function displayStringCollapsed(v) {
-    var slice = Call(Sss, v, 0, 72);
+    var slice = Sss(v, 0, 72);
     var pretty = Js(slice);
     function expandString(evt) {
       this.removeEventListener("click", expandString, false);
       this.parentNode.parentNode.replaceChild(displayStringExpanded(v),
                                               this.parentNode);
     }
-    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty),
-               DOM("span", {className:"jsshell-expand",
-                            click: expandString}, "..."));
+    return DOM("span", ["span.jsshell-string", pretty],
+               ["span.jsshell-expand", { click: expandString }, "..."]);
   }
 
   function displayStringExpanded(v) {
@@ -404,18 +463,70 @@
       this.parentNode.parentNode.replaceChild(displayStringCollapsed(v),
                                               this.parentNode);
     }
-    return DOM("span", DOM("span", {className: "jsshell-string"}, pretty),
-                       " (", DOM("span", { className: "jsshell-collapse",
-                                           click: collapseString },
-                                 "collapse"), ")");
+    return DOM("span", ["span.jsshell-string", areaWrap(pretty)],
+                       " (", ["span.jsshell-collapse",
+                                  {click: collapseString },
+                                  "collapse"], ")");
+  }
+
+  function displayNumberCollapsed(v) {
+    function expandNumber(evt) {
+      this.removeEventListener("click", expandNumber, false);
+      this.parentNode.parentNode.replaceChild(displayNumberExpanded(v),
+                                              this.parentNode);
+    }
+    var result = DOM("span", ["span.jsshell-number", Nts(v)], " ",
+                       ["span.jsshell-expand",
+                          { click: expandNumber }, "..."]);
+    return result;
+  }
+
+  function displayNumberExpanded(v) {
+    function collapseNumber(evt) {
+      this.removeEventListener("click", collapseNumber, false);
+      this.parentNode.parentNode.replaceChild(displayNumberCollapsed(v),
+                                              this.parentNode);
+    }
+    var result = DOM("span", " (", ["span.jsshell-collapse",
+                            { click: collapseNumber }, "collapse"], ")",
+                            ["br"], numberDetails(v), ["br"],
+                            ["span.jsshell-number", Nts(v)]);
+    return result;
+  }
+
+  function numberDetails(v) {
+    var bits = Double.from(v);
+    function colorizeHex(bits) {
+      var hexString = bits.toHexString();
+      return DOM("span",
+          ["span.jsshell-hexsign", hexString[0]],
+          ["span.jsshell-hexexponent", Sss(hexString,1,3)],
+          ["span.jsshell-hexmantissa", Sss(hexString, 3)]);
+    }
+    function colorizeBin(bits) {
+      var binString = bits.toBinaryString();
+      return DOM("span",
+          ["span.jsshell-binsign", binString[0]],
+          ["span.jsshell-binexponent", Sss(binString, 1, 12)],
+          ["span.jsshell-binmantissa", Sss(binString, 12)]);
+    }
+    return DOM("table.jsshell-numbers",
+       ["tr",["th", "Hex"], ["td", areaWrap(Nts(+bits, 16))]],
+       ["tr",["th", "Exact"], ["td", areaWrap(bits.toExactString())]],
+       ["tr",["th", "Bits (hex)"], ["td", colorizeHex(bits)]],
+       ["tr",["th", "Bits (binary)"], ["td", colorizeBin(bits)]]);
   }
 
   function prettyPrintPrimitive(v) {
     if (typeof v === "string") {
       if (v.length > 72) {
+        if (expand) return displayStringExpanded(v);
         return displayStringCollapsed(v);
       }
       return DOM("span", {className: "jsshell-string"}, Js(v));
+    } else if (typeof v === "number") {
+      if (expand) return displayNumberExpanded(v);
+      return displayNumberCollapsed(v);
     } else {
       return "" + v;
     }
@@ -439,7 +550,7 @@
       res = DOM("span",
                 "{", displayObjectCollapsed(value), "}");
     }
-    res.appendChild(DOM("span", { className: "jsshell-typename" },
+    res.appendChild(DOM("span.jsshell-typename",
                         " : ", TypeName(value)));
     return res;
   }
@@ -448,7 +559,7 @@
     switch (typeof value) {
     case "string":
       if (value.length > 10) {
-        value = Call(Sss, value, 0, 7) + "...";
+        value = Sss(value, 0, 7) + "...";
       }
       return Js(value);
     case "object":
@@ -479,7 +590,10 @@
       this.removeEventListener("click", expand, false);
       this.parentNode.replaceChild(displayObject(object), this);
     }
-    return DOM("span", {className:"jsshell-expand", click: expand }, "...");
+
+    var result = DOM("span", {className:"jsshell-expand",
+                              click: expand }, "...");
+    return result;
   }
 
   function displayObject(object) {
@@ -502,18 +616,18 @@
     }
 
     var primitiveValue;
-    switch (Call(Ots, object)) {
+    switch (Ots(object)) {
     case "[object String]":
-      primitiveValue = Call(Svo, object);
+      primitiveValue = Svo(object);
       break;
     case "[object Number]":
-      primitiveValue = Call(Nvo, object);
+      primitiveValue = Nvo(object);
       break;
     case "[object Boolean]":
-      primitiveValue = Call(Bvo, object);
+      primitiveValue = Bvo(object);
       break;
     case "[object Date]":
-      primitiveValue = Call(Dvo, object);
+      primitiveValue = Dvo(object);
       break;
     }
     if (primitiveValue !== void 0) {
@@ -562,4 +676,317 @@
     return line;
   }
 
- })(this);
+  // JS Double Tool
+  function Double(negative, biasedExponent, mantissaBits, value) {
+    this.negative = negative;
+    this.biasedExponent = biasedExponent;
+    this.mantissaBits = mantissaBits;
+    this.value = value;
+  }
+
+  Double.prototype = {
+    constructor: Double,
+    toString: function toString() {
+      var double = this.valueOf();
+      if (double == 0 && this.negative) return "-0";
+      return Nts(double);
+    },
+    valueOf: function valueOf() {
+      if (typeof this.value === "number") return this.value;
+      if (typeof AB == "function") {
+        var a = new AB(8);
+        var i = new I32A(a);
+        i[0] = this.mantissaBits >> 0;
+        i[1] = Mf(this.mantissaBits / 0x100000000) |
+               this.biasedExponent << 20 |
+               (this.negative ? 0x80000000 : 0);
+        var d = new F64A(a);
+        return this.value = d[0];
+      }
+      // Generate doubles arithmetically. Doesn't handle NaN payloads.
+      if (!this.isFinite()) {
+        if (this.isNaN()) {
+          this.value == NaN;
+        } else {
+          this.value = (this.negative ? -Infinity : Infinity);
+        }
+      } else {
+        this.value = this.sign * Mp(2, this.exponent) * this.mantissa;
+      }
+      return this.value;
+    },
+    toHexString: function toHexString() {
+      var exp = this.biasedExponent;
+      if (this.negative) exp += Mp(2, Double.exponentBits);
+      exp += Mp(2, Double.exponentBits + 1);
+      // This assumes Double.mantissaBits is a multiplum of 4.
+      var mantissa = this.mantissaBits + Mp(2, Double.mantissaBits);
+      var expString = Stuc(Sss(Nts(exp, 16),1));
+      var mantissaString = Stuc(Sss(Nts(mantissa, 16), 1));
+      return expString + mantissaString;
+    },
+    toBinaryString: function toBinaryString() {
+      var exp = this.biasedExponent;
+      if (this.negative) exp += Mp(2, Double.exponentBits);
+      exp += Mp(2, Double.exponentBits + 1);
+      var mantissa = this.mantissaBits + Mp(2, Double.mantissaBits);
+      var expString = Nts(exp, 2).substring(1);
+      var mantissaString = Sss(Nts(mantissa, 2), 1);
+      return expString + mantissaString;
+    },
+    toExactString: function toExactString(exponential_opt) {
+      function i2d(i) {
+        // positive integer to decimal.
+        var res = arrayLike(0);
+        var pow2 = arrayLike(1);
+
+        function add() {
+          var carry = 0;
+          var n = res.length;
+          if (n < pow2.length) n = pow2.length;
+          for (var i = 0; i < n; i++) {
+            var d = (res[i] || 0) + (pow2[i] || 0) + carry;
+            carry = 0;
+            if (d >= 10) {
+              carry = 1;
+              d -= 10;
+            }
+            res[i] = d;
+          }
+          if (carry > 0) res[i++] = carry;
+          res.length = i;
+        }
+        function double() {
+          var carry = 0;
+          for (var i = 0; i < pow2.length; i++) {
+            var d = pow2[i] * 2 + carry;
+            carry = 0;
+            if (d >= 10) {
+              carry = 1;
+              d -= 10;
+            }
+            pow2[i] = d;
+          }
+          if (carry > 0) pow2[i++] = carry;
+          pow2.length = i;
+        }
+        while (i > 0) {
+          if (i & 1) {
+            add();
+            i -= 1;
+          }
+          double();
+          i /= 2;
+        }
+        return Aj(Ar(res),"");
+      }
+      function f2d(f) {
+        // Fraction (between zero and one) to decimal.
+        var res = arrayLike(0);
+        var frac = arrayLike(5); // 0.5
+        function halve() {
+          var carry = 0;
+          for (var i = 0; i < frac.length; i++) {
+            var d = frac[i];
+            frac[i] = (d >> 1) + carry;
+            carry = (d & 1) * 5;
+          }
+          if (carry > 0) frac[i++] = carry;
+          frac.length = i;
+        }
+        function add() {
+          var carry = 0;
+          for (var i = frac.length - 1; i >= 0; i--) {
+            var d = (res[i] || 0) + frac[i] + carry;
+            carry = 0;
+            if (d >= 10) {
+              carry = 1;
+              d -= 10;
+            }
+            res[i] = d;
+          }
+          res.length = frac.length;
+        }
+        while (f > 0) {
+          f = f * 2;
+          if (f & 1) {
+            add();
+            f -= 1;
+          }
+          halve()
+        }
+        return Aj(res, "");
+      }
+
+      var quietFlag = Mp(2,51);
+      if (this.isNaN()) {
+        // NaN payload is lost when converting to number.
+        if (this.negative || this.mantissaBits != quietFlag) {
+          // Non-standard NaN created using Double.fromBits.
+          var str = "SNaN";
+          var mantissaBits = this.mantissaBits;
+          if (mantissaBits >= quietFlag) {
+            str = "QNaN";
+            mantissaBits -= quietFlag;
+          }
+          return str + "(" + (this.negative ? "-" : "") +
+                       Stuc(Nts(mantissaBits, 16)) + ")";
+        }
+        return "NaN";
+      }
+      var d = this.valueOf();
+      if (d == 0) {
+        if (1/d < 0) return "-0.0";
+        return "0.0";
+      }
+      var sign = "";
+      if (d < 0) {
+        sign = "-";
+        d = -d;
+      }
+      if (!isFinite(d)) return sign + "Infinity";
+      var intPart = Mf(d);
+      var fracPart = d - intPart;
+      if (exponential_opt && (intPart == 0) != (fracPart == 0)) {
+        if (intPart >= 1e21) return makeIntExp(sign, intPart);
+        if (fracPart != 0 && fracPart < 1e-6) return makeFracExp(sign, fracPart);
+      }
+      return sign + i2d(intPart) + "." + f2d(fracPart);
+
+      function makeIntExp(sign, intPart) {
+        var intString = i2d(intPart);
+        var n = intString.length;
+        var nonZeroCount = n;
+        while (Scca(intString, nonZeroCount - 1) == 0x30) {
+          nonZeroCount--;
+        }
+        var res = intString[0];
+        if (nonZeroCount >  1) {
+          res += "." + Sss(intString, 1, nonZeroCount);
+        }
+        res += "e+" + (n - 1);
+        return res;
+      }
+
+      function makeFracExp(sign, fracPart) {
+        var fracString = f2d(fracPart);
+        var n = fracString.length;
+        var zeroCount = 0;
+        while (Scca(fracString, zeroCount) == 0x30) zeroCount++;
+
+        var res = fracString[zeroCount];
+        if (zeroCount + 1 < n) {
+          res += "." + Sss(fracString, zeroCount + 1);
+        }
+        res += "e-" + (zeroCount + 1);
+        return res;
+      }
+
+    },
+    isFinite: function isFinite() {
+      return this.biasedExponent < 0x7FF;
+    },
+    isNaN: function isNaN() {
+      return this.biasedExponent == 0x7FF && this.mantissaBits != 0;
+    },
+    isDenormal: function isDenormal() {
+      return this.biasedExponent == 0;
+    },
+    get exponent() {
+      if (this.biasedExponent == 0x7FF) {
+        return this.value;
+      }
+      if (this.biasedExponent == 0) return -Double.bias + 1;
+      return this.biasedExponent - Double.bias;
+    },
+    get mantissa() {
+      // If NaN, return payload.
+      if (this.biasedExponent == 0x7ff) return mantissaBits;
+      var mantissa = this.mantissaBits / Mp(2, Double.mantissaBits);
+      if (this.biasedExponent > 0) mantissa += 1;
+      return mantissa;
+    },
+    get sign() {
+      return this.negative ? -1 : 1;
+    }
+  };
+
+  Double.mantissaBits = 52;
+  Double.exponentBits = 11;
+  Double.bias = 1023;
+
+  Double.NegativeZero = new Double(true, 0, 0, -0);
+  Double.Zero = new Double(false, 0, 0, 0);
+  Double.MinValue = new Double(false, 0, 1, 5e-324);
+  Double.MinNormal = new Double(false, 1, 0, 2.2250738585072014e-308);
+  Double.NaN = new Double(false, 0x7FF, 0x8000000000000, NaN);
+  Double.Infinity = new Double(false, 0x7FF, 0, Infinity);
+  Double.NegativeInfinity = new Double(true, 0x7FF, 0, -Infinity);
+
+  Double.from = function from(double) {
+    function fromUsingTypedArray(double) {
+      var a = new AB(8);
+      var d = new F64A(a);
+      d[0] = double;
+      var i = new I32A(a);
+      var low = i[0];
+      var hi = i[1];
+      var negative = hi < 0;
+      var mantissabits = (low >>> 0) + (hi & 0xfffff) * Mp(2,32);
+      var biasedExponent = (hi >>> 20) & 0x7ff;
+      return new Double(negative, biasedExponent, mantissabits, double);
+    }
+    if (AB !== null) {
+      return fromUsingTypedArray(double);
+    }
+    // Slow arithmetic decomposition of double value.
+    if (!isF(double)) {
+      if (isN(double)) return Double.NaN;
+      if (double < 0) return Double.NegativeInfinity;
+      return Double.Infinity;
+    }
+    var magnitude = double;
+    var negative = false;
+    if (magnitude < 0 || magnitude == 0 && 1 / magnitude < 0) {
+      negative = true;
+      magnitude = -magnitude;
+    }
+    var minNormal = 2.2250738585072014e-308;
+    if (magnitude < minNormal) {
+      // It's a denormal (including zero).
+      var mantissaBits =
+         magnitude * Mp(2, Double.bias) * Mp(2, Double.mantissaBits - 1);
+      return new Double(negative, 0, mantissaBits, double);
+    }
+    var exponent = 0;
+    while (magnitude < 1) {
+      magnitude *= 2;
+      exponent -= 1;
+    }
+    while (magnitude >= 2) {
+      magnitude /= 2;
+      exponent += 1;
+    }
+    var mantissaBits = (magnitude - 1) * Mp(2, Double.mantissaBits);
+    return new Double(negative, exponent + Double.bias, mantissaBits, double);
+  };
+
+  Double.fromBits =
+      function fromBits(negative, biasedExponent, mantissaBits, value) {
+    if ((typeof biasedExponent != "number") ||
+        (typeof mantissaBits != "number") ||
+        !(biasedExponent >= 0 && biasedExponent <= 0x7ff) ||
+        !(mantissaBits >= 0 && mantissaBits < 4503599627370496)) {
+      return Double.NaN;
+    }
+    negative = !!negative;
+    if (biasedExponent == 0x7FF) {
+      if (mantissaBits == 0) {
+        if (negative) return Double.NegativeInfinity;
+        return Double.Infinity;
+      }
+    }
+    if (typeof value != "number") value = void 0;
+    return new Double(negative, biasedExponent, mantissaBits, value);
+  }
+})(this);

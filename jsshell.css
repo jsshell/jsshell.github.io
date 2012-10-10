@@ -32,7 +32,8 @@ body {
   color: #93a1a1;
 }
 
-.jsshell-object-key {
+.jsshell-object-key,
+.jsshell-property-eq {
   float: left;
   vertical-align: top;
   padding-right: 0.5ex;
@@ -87,11 +88,6 @@ body {
   box-shadow: 1px 1px 3px #93a1a1;
 }
 
-.jsshell-input:before {
-  float: left;
-  content: ">";
-}
-
 .jsshell-button {
   background-color: #cb4b16;
   color: #fdf6e3;
@@ -109,4 +105,37 @@ body {
 
 .jsshell-button:active {
   background-color: #859900;
+}
+
+table.jsshell-numbers {
+  display: inline-table;
+  padding: 0;
+  margin: 0;
+  border-collapse: collapse;
+}
+
+table.jsshell-numbers th {
+  vertical-align: top;
+  text-align: left;
+  width: 12ex;
+  font-weight: normal;
+}
+
+textarea.jsshell-inlineText {
+  font-family: inherit;
+  color: inherit;
+  background-color: inherit;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+}
+
+.jsshell-binsign { color: #dc322f;}
+.jsshell-hexsign { color: #cb4b16; }
+.jsshell-binexponent, .jsshell-hexexponent { color: #859900; }
+.jsshell-binmantissa, .jsshell-hexmantissa { color: #268bd2; }
+
+#jsshell-expand {
+   width: 1.5em ;
 }
