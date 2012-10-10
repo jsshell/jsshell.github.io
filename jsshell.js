@@ -269,10 +269,11 @@
     var text = input.value;
     var div = document.createElement("div");
     div.innerHTML = text;
+    var first = div.firstChild;
     while (div.firstChild) {
       document.body.insertBefore(div.firstChild, document.body.lastChild);
     }
-    reportValue(div);
+    reportValue(first);
   }
 
   function insertIFrame(input) {
