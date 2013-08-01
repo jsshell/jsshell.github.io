@@ -20,6 +20,7 @@
   var Ogopd = O.getOwnPropertyDescriptor;
   var indirectEval = eval;
   var Js = JSON.stringify;
+  var Sfcc = String.fromCharCode;
   var Mp = Math.pow;
   var Mf = Math.floor;
   var Mc = Math.ceil;
@@ -458,13 +459,71 @@
   }
 
   function displayStringExpanded(v) {
-    var pretty = Js(v);
     function collapseString(evt) {
       this.removeEventListener("click", collapseString, false);
       this.parentNode.parentNode.replaceChild(displayStringCollapsed(v),
                                               this.parentNode);
     }
-    return DOM("span", ["span.jsshell-string", areaWrap(pretty)],
+    var N = 16;
+    var surrogate = false;
+    var table = DOM("table.jsshell-chartable");
+
+    for (var i = 0; i < v.length; i += N) {
+      var row = table.insertRow(table.rows.length);
+      var header = row.insertCell(0);
+      header.className="jsshell-chartable-offset";
+      header.appendChild(TXT(Nts(i, 16)));
+      for (var j = 0; j < N; j++) {
+        var charCell = row.insertCell(1 + j * 2)
+        var codeCell = row.insertCell(1 + j);
+        codeCell.className = "jsshell-chartable-code";
+        charCell.className = "jsshell-chartable-char";
+        if (j === 0) {
+          codeCell.className += " jsshell-firstcol";
+          charCell.className += " jsshell-firstcol";
+        } else if ((j & 3) == 0) {
+          codeCell.className += " jsshell-fourthcol";
+          charCell.className += " jsshell-fourthcol";
+        }
+        if (j === N - 1) {
+          codeCell.className += " jsshell-lastcol";
+          charCell.className += " jsshell-lastcol";
+        }
+        if (i + j == v.length) {
+          charCell.colSpan = N - j;
+          charCell.className += " jsshell-lastcol jsshell-empty";
+          codeCell.colSpan = N - j;
+          codeCell.className += " jsshell-lastcol jsshell-empty";
+          break;
+        } 
+        var code = Scca(v, i + j);
+        codeCell.appendChild(TXT(Nts(code, 16)));
+        // TODO: Only do this for printable chars.
+        charCell.appendChild(TXT(Sfcc(code)));
+        (function(charCell, codeCell) {
+
+          codeCell.addEventListener("mouseover", function (e) {
+            var cn = charCell.className;
+            charCell.className = cn + " jsshell-highlight";
+            function onmouseout(e) {
+              charCell.className = cn;
+              codeCell.removeEventListener("mouseout", onmouseout, false);
+            };
+            codeCell.addEventListener("mouseout", onmouseout, false);
+          }, false);
+          charCell.addEventListener("mouseover", function (e) {
+            var cn = codeCell.className;
+            codeCell.className = cn + " jsshell-highlight";
+            function onmouseout(e) {
+              codeCell.className = cn;
+              charCell.removeEventListener("mouseout", onmouseout, false);
+            };
+            charCell.addEventListener("mouseout", onmouseout, false);
+          }, false);
+        })(charCell, codeCell);
+      }
+    }
+    return DOM("span", ["span.jsshell-string", table], ["br"],
                        " (", ["span.jsshell-collapse",
                                   {click: collapseString },
                                   "collapse"], ")");
@@ -511,6 +570,23 @@
           ["span.jsshell-binexponent", Sss(binString, 1, 12)],
           ["span.jsshell-binmantissa", Sss(binString, 12)]);
     }
+    if (v == (v & 0x1fffff) && v <= 0x10FFFF && (v < 0xD800 || v > 0xDFFF)) {
+      var char;
+      if (v < 0x10000) {
+        char =  Sfcc(v);
+      } else {
+        var surrogateBits = v - 0x10000;
+        char = Sfcc(0xD800 + (surrogateBits & 0x3ff), 
+                    0xDC00 + (surrogateBits >> 10));
+      }
+      return DOM("table.jsshell-numbers",
+         ["tr",["th", "Hex"], ["td", areaWrap(Nts(+bits, 16))]],
+         ["tr",["th", "Character"], ["td", areaWrap(Js(char))]],
+         ["tr",["th", "Exact"], ["td", areaWrap(bits.toExactString())]],
+         ["tr",["th", "Bits (hex)"], ["td", colorizeHex(bits)]],
+         ["tr",["th", "Bits (binary)"], ["td", colorizeBin(bits)]]);
+
+    }
     return DOM("table.jsshell-numbers",
        ["tr",["th", "Hex"], ["td", areaWrap(Nts(+bits, 16))]],
        ["tr",["th", "Exact"], ["td", areaWrap(bits.toExactString())]],
@@ -520,11 +596,8 @@
 
   function prettyPrintPrimitive(v) {
     if (typeof v === "string") {
-      if (v.length > 72) {
-        if (expand) return displayStringExpanded(v);
-        return displayStringCollapsed(v);
-      }
-      return DOM("span", {className: "jsshell-string"}, Js(v));
+      if (expand) return displayStringExpanded(v);
+      return displayStringCollapsed(v);
     } else if (typeof v === "number") {
       if (expand) return displayNumberExpanded(v);
       return displayNumberCollapsed(v);

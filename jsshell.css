@@ -136,6 +136,35 @@ textarea.jsshell-inlineText {
 .jsshell-binexponent, .jsshell-hexexponent { color: #859900; }
 .jsshell-binmantissa, .jsshell-hexmantissa { color: #268bd2; }
 
+.jsshell-chartable { 
+  display: inline-table; 
+  border-collapse: collapse;
+  font-family: monospace;
+}
+.jsshell-chartable td { margin: 0; }
+.jsshell-chartable-offset { 
+    text-align: right; 
+    color: gray; 
+    border-right: 1px solid #586e75; 
+    padding-right: 0.5ex;
+}
+td.jsshell-chartable-code { text-align: right; width: 4ex; padding: 0 0.25ex;}
+td.jsshell-chartable-char { text-align: center; width: 1em; padding: 0;}
+td.jsshell-chartable-code.jsshell-firstcol { padding-left: 0.5ex; }
+td.jsshell-chartable-code.jsshell-lastcol { padding-right: 0.5ex; }
+td.jsshell-chartable-char.jsshell-firstcol { 
+  padding-left: 0.5ex; 
+  border-left: 1px solid #657b83;
+}
+td.jsshell-chartable-code.jsshell-fourthcol { border-left: 1px solid #586e75;}
+td.jsshell-chartable-code:hover { background-color: #268bd2; color: white; }
+td.jsshell-chartable-char:hover { background-color: #268bd2; color: white; }
+td.jsshell-chartable-code.jsshell-highlight { background-color: #268bd2; color: white; }
+td.jsshell-chartable-char.jsshell-highlight { background-color: #268bd2; color: white; }
+
+td.jsshell-chartable-code.jsshell-empty:hover { background-color: inherit; color: inherit; !important}
+td.jsshell-chartable-char.jsshell-empty:hover { background-color: inherit; color: inherit; !important}
+
 #jsshell-expand {
    width: 1.5em ;
 }
