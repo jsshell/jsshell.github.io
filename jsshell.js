@@ -28,6 +28,7 @@
   var call = Function.prototype.call;
   var Ohop = call.bind(O.prototype.hasOwnProperty);
   var Ots = call.bind(O.prototype.toString);
+  var Ss = call.bind(String.prototype.split);
   var Sss = call.bind(String.prototype.substring);
   var St = call.bind(String.prototype.trim);
   var Svo = call.bind(String.prototype.valueOf);
@@ -184,14 +185,21 @@
     return document.createTextNode(string);
   }
 
-  // |tag| must be a string.
+  // |tag| must be a string. If empty, create document fragment.
+  //       If contains `.name` suffixes, used a class names.
+  //       If contains `#name` suffix, used as `id`.
   // |attrs|, if present, must be a non-array, non-DOM object.
   // |children| may be either a DOM Node, DocumentFragment, string or array
-  //    any of any of these.
+  //    of any of these.
   function DOM(tag, attrs, children /*...*/) {
     var parts = tag.split(/([#.])/g);
     tag = parts[0];
-    var element = document.createElement(tag);
+    var element;
+    if (tag == "") {
+      element = document.createDocumentFragment()
+    } else {
+      element = document.createElement(tag);
+    }
     var classNames = arrayLike();
     for (var i = 1; i < parts.length; i += 2) {
       if (parts[i] == '.') {
@@ -200,7 +208,9 @@
         element.id = parts[i + 1];
       }
     }
-    element.className = Aj(classNames, " ");
+    if (classNames.length > 0) {
+      element.className = Aj(classNames, " ");
+    }
     var childIndex = 1;
     if (IsPlainObject(attrs)) {
       assignAttributes(element, attrs);
@@ -447,8 +457,31 @@
   }
 
   function displayStringCollapsed(v) {
-    var slice = Sss(v, 0, 72);
-    var pretty = Js(slice);
+    var lines = Ss(v, "\n");
+    var lineCount = lines.length;
+    var maxLength = 0;
+    for (var line of lines) {
+      if (line.length > maxLength) {
+        maxLength = line.length;
+      }
+    }
+    var firstLine = lines[0]; 
+    if (firstLine.length > 72) {
+      firstLine = Sss(firstLine, 0, 72);
+    }
+    var textbox;
+    textbox = DOM("span.jsshell-stringtext-box", 
+      ["span.jsshell-stringtext-maxline", {
+        "style": {"height": lineCount + "em"}
+      }, firstLine],
+      ["textarea.jsshell-stringtext", {
+        "cols": maxLength, "rows": lineCount,
+        "readOnly": "true",
+      }, v]);
+    var pretty = DOM("span", '"', textbox, '"');
+// "<span style="position: relative"><span style="background: yellow; color: red; visibility: hidden">Able</span><textarea style="resize:none; overflow:hidden; display: block; position:absolute; left:0; top: 0; height: 100%; padding: 0; margin: 0; font-size: inherit; width: 100%; border:none; background: inherit; color:inherit;" type="text" onclick="this.select()">Ablebody
+// Marginal</textarea></span>..."
+
     function expandString(evt) {
       this.removeEventListener("click", expandString, false);
       this.parentNode.parentNode.replaceChild(displayStringExpanded(v),
